@@ -3,7 +3,7 @@ services:
     image: mariadb:10.11
     container_name: openemr_mariadb
     restart: unless-stopped
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--plugin-load-add=server_audit", "--server-audit-logging=ON", "--server-audit-events=CONNECT,QUERY,TABLE", "--server-audit-file-path=/var/lib/mysql/mariadb_audit.log"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -62,13 +62,68 @@ services:
     volumes:
       - openemr_sites:/var/www/localhost/htdocs/openemr/sites
       - openemr_logs:/var/log
+      - ./logstash_certs:/etc/openemr/atna-certs:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost/interface/login/login.php >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 40
 
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: filebeat
+    user: root
+    # Ensures filebeat doesn't fail due to strict file permissions on the config
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - cyseopenemr_mariadb_data:/var/log/mariadb:ro
+      - openemr_logs:/var/log/openemr:ro
+    depends_on:
+      - openemr
+      - mariadb
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: logstash
+    restart: unless-stopped
+    volumes:
+      - ./logstash_certs:/usr/share/logstash/config/certs
+      - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "6514:6514"
+    environment:
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - 9200:9200
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
 volumes:
   mariadb_data:
   openemr_sites:
   openemr_logs:
+  elasticsearch_data:
+  cyseopenemr_mariadb_data:
+    external: true

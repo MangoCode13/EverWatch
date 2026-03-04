@@ -1,0 +1,30 @@
+filebeat.inputs:
+- type: filestream
+  id: openemr-audit-logs
+  paths:
+    - /var/log/mariadb/mariadb_audit.log
+  fields:
+    service: mariadb
+    log_type: audit
+
+- type: filestream
+  id: openemr-app-logs
+  paths:
+    - /var/log/openemr/*.log
+  fields:
+    service: openemr_app
+
+- type: filestream
+  id: openemr-web-access
+  paths:
+    - /var/log/openemr/apache2/access.log
+  fields:
+    service: openemr_app
+    log_type: web_access
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"] 
+
+#output.console:
+#  pretty: true
+  

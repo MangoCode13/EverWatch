@@ -1,4 +1,73 @@
-# OpenEMR Cybersecurity Systems Engineering Testbed  
+# OpenEMR Cybersecurity Systems Engineering Testbed
+## EverWatch Start-up  Guide
+
+EverWatch uses the ELK stack to create the UI dashboard. The `docker-compose.yml` file was updated to pull the ELK images.
+In order for OpenEMR to send ATNA audit logs, a TLS connection must be established. Follow these steps:
+
+## 1. Start the containers
+```bash
+docker compose up -d
+
+      docker ps # wait for all the services is healthy
+```
+
+## 2. Setup TLS connection
+Update the **Admin → Config → Logging** settings in OpenEMR to add the TLS certificates.
+
+OpenEMR URL: http://localhost:8080  
+Login: admin / pass
+
+Naviate to **Admin → Config → Logging** and make the following changes to the settings:
+
+- Enable ATNA Auditing ☑  
+- ATNA audit host: `logstash`  
+- ATNA audit port: `6514`  
+- ATNA audit local certificate: `/etc/openemr/atna-certs/openemr-combined.pem`  
+- ATNA audit CA certificate: `/etc/openemr/atna-certs/ca.crt`  
+- Enable Audit Log Encryption ☑  
+- Save changes
+
+⚠️ Logs should begin flowing after the changes are saved. If not, restart OpenEMR:
+
+```bash
+docker compose restart openemr
+```
+**Note:** These are self-signed certificates created with OpenSSL. The `.yml` file copies them into the OpenEMR container.
+
+---
+
+## 3. Open Kibana
+
+Kibana: http://localhost:5601/
+
+Import the custom data views (Dashboard and Discover):
+
+- Open the navigation pane using the hamburger menu in the top-left, then click **Stack Management**.  
+- Under **Kibana**, select **Saved Objects**.  
+- Click **Import**.  
+- Select the `.ndjson` file located in the same directory as this README.
+
+---
+
+## 4. Custom Views
+
+### Login Dashboard
+- In the navigation pane, under **Analytics**, click **Dashboards**.  
+- Select **Login Dash**.
+
+### Discover View
+
+- In the navigation pane, under **Analytics**, click **Discover**.  
+- Select **Combined Data View** from the dropdown menu in the top-left (under the hamburger menu).
+
+⚠️ Logs should include:
+
+- Apache webserver logs from `openemr_app`: `/var/log/apache2/access.log`  
+- SQL queries from `openemr_mariadb`: `/var/lib/mysql/mariadb_audit.log`  
+- ATNA OpenEMR audit logs sent from the OpenEMR application to Logstash
+
+---
+
 ## Student Guide
 
 This repository provides access to a **preconfigured Healthcare Information System (HIS)** based on **OpenEMR**, used throughout the course **Cybersecurity Systems Engineering**.
