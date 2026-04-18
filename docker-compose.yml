@@ -72,13 +72,18 @@ services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.12.0
     container_name: filebeat
+    restart: unless-stopped
     user: root
     # Ensures filebeat doesn't fail due to strict file permissions on the config
     command: ["filebeat", "-e", "--strict.perms=false"]
     volumes:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - cyseopenemr_mariadb_data:/var/log/mariadb:ro
+      - ./geoip-db/GeoLite2-City.mmdb:/usr/share/filebeat/geoip/GeoLite2-City.mmdb:ro
+      - everwatch_mariadb_data:/var/log/mariadb:ro
       - openemr_logs:/var/log/openemr:ro
+    environment:
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
     depends_on:
       - openemr
       - mariadb
@@ -95,28 +100,42 @@ services:
     environment:
       LS_JAVA_OPTS: "-Xmx512m -Xms512m"
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
     depends_on:
       - elasticsearch
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     container_name: elasticsearch
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - 9200:9200
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./geoip-db/GeoLite2-City.mmdb:/usr/share/elasticsearch/config/ingest-geoip/GeoLite2-City.mmdb:ro
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
+    restart: unless-stopped
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTEDSAVEDOBJECTS_KEY}
+      - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_SECURITY_SESSION_KEY}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_REPORTING_KEY}
+      - XPACK_ACTIONS_ALLOWEDHOSTS=${KIBANA_ALLOWED_HOSTS}
     ports:
       - 5601:5601
+    volumes:
+      - kibana_config:/usr/share/kibana/config
     depends_on:
       - elasticsearch
 
@@ -125,5 +144,6 @@ volumes:
   openemr_sites:
   openemr_logs:
   elasticsearch_data:
-  cyseopenemr_mariadb_data:
+  kibana_config:
+  everwatch_mariadb_data:
     external: true

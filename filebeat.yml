@@ -22,8 +22,30 @@ filebeat.inputs:
     service: openemr_app
     log_type: web_access
 
+processors:
+  - if:
+      equals:
+        fields.log_type: web_access
+    then:
+      - dissect:
+          tokenizer: '%{source.ip} - - [%{apache.access.time}] "%{http.request.method} %{url.original} HTTP/%{http.version}" %{http.response.status_code|long} %{http.response.body.bytes|long} "%{http.request.referrer}" "%{user_agent.original}"'
+          field: message
+          target_prefix: ""
+          ignore_failure: true
+      - timestamp:
+          field: apache.access.time
+          layouts:
+            - '02/Jan/2006:15:04:05 -0700'
+          ignore_failure: true
+      - drop_fields:
+          fields: ["apache.access.time"]
+          ignore_missing: true
+
 output.elasticsearch:
-  hosts: ["http://elasticsearch:9200"] 
+  hosts: ["http://elasticsearch:9200"]
+  username: "${ELASTICSEARCH_USERNAME:elastic}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  pipeline: "filebeat-web-geoip"
 
 #output.console:
 #  pretty: true
