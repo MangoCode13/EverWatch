@@ -28,12 +28,6 @@ Go to **Admin → Config → Logging** and set:
 - **ATNA audit CA certificate:** `/etc/openemr/atna-certs/ca.crt`
 - **Enable Audit Log Encryption:** on
 
-Save and, if needed, restart OpenEMR:
-
-```bash
-docker compose restart openemr
-```
-
 ## 3. Import the EverWatch dashboard and security rules
 
 The script polls until Kibana is ready, then imports:
