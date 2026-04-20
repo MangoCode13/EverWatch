@@ -31,18 +31,10 @@ Go to **Admin → Config → Logging** and set:
 Save and, if needed, restart OpenEMR:
 
 ```bash
-docker compose restart openemr_app
+docker compose restart openemr
 ```
 
-## 3. Verify Kibana and log ingestion
-
-```bash
-docker compose logs kibana --tail=40
-docker compose logs filebeat --tail=40
-docker compose logs logstash --tail=40
-```
-
-## 4. Import the EverWatch dashboard and security rules
+## 3. Import the EverWatch dashboard and security rules
 
 The script polls until Kibana is ready, then imports:
 - `EverWatchDashboard.ndjson` saved objects
@@ -54,7 +46,7 @@ The script polls until Kibana is ready, then imports:
 
 > For a remote host: `KIBANA_URL=http://<host>:5601 ./import-dashboard.sh`
 
-## 5. View the EverWatch Dashboard
+## 4. View the EverWatch Dashboard
 
 Log in to Kibana at http://localhost:5601:
 - **Username:** `elastic`
