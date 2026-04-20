@@ -1,13 +1,5 @@
 filebeat.inputs:
 - type: filestream
-  id: openemr-audit-logs
-  paths:
-    - /var/log/mariadb/mariadb_audit.log
-  fields:
-    service: mariadb
-    log_type: audit
-
-- type: filestream
   id: openemr-app-logs
   paths:
     - /var/log/openemr/*.log
@@ -47,6 +39,4 @@ output.elasticsearch:
   password: "${ELASTICSEARCH_PASSWORD}"
   pipeline: "filebeat-web-geoip"
 
-#output.console:
-#  pretty: true
   

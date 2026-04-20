@@ -3,7 +3,7 @@ services:
     image: mariadb:10.11
     container_name: openemr_mariadb
     restart: unless-stopped
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--plugin-load-add=server_audit", "--server-audit-logging=ON", "--server-audit-events=CONNECT,QUERY,TABLE", "--server-audit-file-path=/var/lib/mysql/mariadb_audit.log"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -79,7 +79,6 @@ services:
     volumes:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ./geoip-db/GeoLite2-City.mmdb:/usr/share/filebeat/geoip/GeoLite2-City.mmdb:ro
-      - everwatch_mariadb_data:/var/log/mariadb:ro
       - openemr_logs:/var/log/openemr:ro
     environment:
       ELASTICSEARCH_USERNAME: elastic
@@ -120,6 +119,24 @@ services:
       - elasticsearch_data:/usr/share/elasticsearch/data
       - ./geoip-db/GeoLite2-City.mmdb:/usr/share/elasticsearch/config/ingest-geoip/GeoLite2-City.mmdb:ro
 
+  # Initialization service to configure Elasticsearch security
+  # Runs once after Elasticsearch starts to set up authentication passwords
+  # Required for Kibana and other services to authenticate with Elasticsearch
+  init-passwords:
+    # Initializes Elasticsearch security passwords on first startup
+    # - Waits for Elasticsearch to be healthy
+    # - Sets the kibana_system user password for Kibana authentication
+    # This must complete before Kibana starts
+    image: curlimages/curl:latest
+    volumes:
+      - ./init-passwords.sh:/init-passwords.sh:ro
+    command: sh /init-passwords.sh
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD}
+    depends_on:
+      - elasticsearch
+
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
@@ -138,6 +155,7 @@ services:
       - kibana_config:/usr/share/kibana/config
     depends_on:
       - elasticsearch
+      - init-passwords
 
 volumes:
   mariadb_data:
@@ -145,5 +163,3 @@ volumes:
   openemr_logs:
   elasticsearch_data:
   kibana_config:
-  everwatch_mariadb_data:
-    external: true
