@@ -37,7 +37,7 @@ EverWatch operates strictly as an **external monitoring layer**. It does **not**
 
 #### 1.2.2 Data Flows and Inputs
 
-EverWatch relies exclusively on **read-only, externally exposed evidence sources**. Primary inputs include:
+EverWatch relies exclusively on **read-only sources, managed externally from OpenEMR**. Primary inputs include:
 
 - **OpenEMR audit logs** transmitted via the native auditing API using secure syslog (TLS over port 6514) into Logstash.
 - **Apache web server logs** extracted from the OpenEMR container by Filebeat.
