@@ -39,8 +39,10 @@ EverWatch operates strictly as an **external monitoring layer**. It does **not**
 
 EverWatch relies exclusively on **read-only sources, managed externally from OpenEMR**. Primary inputs include:
 
-- **OpenEMR audit logs** transmitted via the native auditing API using secure syslog (TLS over port 6514) into Logstash.
-- **Apache web server logs** extracted from the OpenEMR container by Filebeat.
+- **OpenEMR ATNA audit logs** transmitted via the native auditing API using secure syslog (TLS over port 6514) into Logstash.  
+(OpenEMR ATNA audit logs → Logstash → Elasticsearch\EverWatch) 
+- **OpenEMR Apache web server logs** extracted from the OpenEMR container by Filebeat.  
+(OpenEMR Apache web server logs → Filebeat → Elasticsearch\EverWatch) 
 - **Optional enrichment feeds**, such as external threat intelligence or vulnerability data.
 
 These inputs are correlated to produce governance-oriented outputs. EverWatch generates:

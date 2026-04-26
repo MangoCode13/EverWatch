@@ -9,7 +9,8 @@ filebeat.inputs:
 - type: filestream
   id: openemr-web-access
   paths:
-    - /var/log/openemr/apache2/access.log
+    - /var/log/openemr/apache2/access.log*
+  prospector.scanner.exclude_files: ['\.gz$']
   fields:
     service: openemr_app
     log_type: web_access
