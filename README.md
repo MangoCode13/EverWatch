@@ -237,6 +237,8 @@ This scenario simulates brute-force or password-guessing behavior.
 Maps the IP address of each successful login to its geographic location.
 An alert is generated when a login originates from outside the designated state or region associated with the healthcare organization.
 
+> **Note:** GeoIP enrichment does not resolve private or loopback IP addresses (e.g., `127.0.0.1`, `10.x.x.x`, `192.168.x.x`). When running on localhost, logins will appear with no geographic data and will not trigger out-of-state alerts. To test this rule, access OpenEMR from a publicly routable IP address, or use a VPN/proxy that exits from a public IP.
+
 #### 3.2.3 Misuse of Patient Records
 
 Identifies when a legitimate clinician accesses an unusually high number of patient records in a short period.
@@ -290,6 +292,8 @@ Useful for identifying brute-force activity or compromised credentials.
 
 Maps successful login IP addresses to geographic locations and triggers when access originates outside the organization's designated state or region.
 Supports detection of anomalous or suspicious remote access.
+
+> **Localhost limitation:** Private and loopback IP addresses (`127.0.0.1`, RFC-1918 ranges) are not resolvable by GeoIP and will produce no geographic output. This alert will only fire when OpenEMR is accessed from a publicly routable IP.
 
 #### 4.2.3 Misuse of Patient Records (Excessive Curiosity)
 

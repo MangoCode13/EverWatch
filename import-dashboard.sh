@@ -9,6 +9,7 @@
 set -eu
 
 KIBANA_URL="${KIBANA_URL:-http://localhost:5601}"
+ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:9200}"
 ELASTIC_PASSWORD="${ELASTIC_PASSWORD:-$(grep '^ELASTIC_PASSWORD=' .env | cut -d= -f2-)}"
 NDJSON_FILE="${NDJSON_FILE:-EverWatchDashboard.ndjson}"
 RULES_FILE="${RULES_FILE:-rules_export.ndjson}"
@@ -32,7 +33,41 @@ until curl -s -o /dev/null -w "%{http_code}" \
   sleep 5
 done
 
-echo "Kibana is ready. Importing saved objects from $NDJSON_FILE ..."
+echo "Creating filebeat-web-geoip ingest pipeline in Elasticsearch ..."
+pipeline_status=$(curl -s -o /tmp/pipeline_result.json -w "%{http_code}" \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  -X PUT "${ELASTICSEARCH_URL}/_ingest/pipeline/filebeat-web-geoip" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "GeoIP enrichment for Filebeat web access logs",
+    "processors": [
+      {
+        "geoip": {
+          "field": "source.ip",
+          "target_field": "source.geo",
+          "ignore_missing": true,
+          "ignore_failure": true
+        }
+      },
+      {
+        "set": {
+          "field": "event.ingested",
+          "value": "{{{_ingest.timestamp}}}",
+          "ignore_failure": true
+        }
+      }
+    ]
+  }')
+
+if [ "$pipeline_status" = "200" ]; then
+  echo "filebeat-web-geoip pipeline created/updated successfully."
+else
+  echo "ERROR: Failed to create filebeat-web-geoip pipeline (HTTP $pipeline_status)"
+  cat /tmp/pipeline_result.json
+  exit 1
+fi
+
+echo "Importing saved objects from $NDJSON_FILE ..."
 saved_objects_status=$(curl -s -o "$SAVED_OBJECTS_RESULT" -w "%{http_code}" \
   -u "elastic:${ELASTIC_PASSWORD}" \
   -X POST "${KIBANA_URL}/api/saved_objects/_import?overwrite=true" \
