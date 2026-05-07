@@ -1,2 +1,5 @@
 
 geoip-db/GeoLite2-City.mmdb
+
+# Local environment variables
+.env

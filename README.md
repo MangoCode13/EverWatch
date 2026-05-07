@@ -11,7 +11,9 @@
 | # | Section |
 |---|---------|
 | **1** | [System Description and Architecture Overview](#1-system-description-and-architecture-overview) |
+| | [1.4 – Repository Provenance and Contribution Scope](#14-repository-provenance-and-contribution-scope) |
 | **2** | [EverWatch Start-up Guide](#2-everwatch-start-up-guide) |
+| | [2.0 – Environment Configuration](#20-environment-configuration) |
 | **3** | [Execution and Demo Instructions](#3-execution-and-demo-instructions) |
 | **4** | [Expected Outputs](#4-expected-outputs) |
 
@@ -71,9 +73,61 @@ The EverWatch architecture is defined by **three distinct trust boundaries**, ea
 
 ---
 
+### 1.4 Repository Provenance and Contribution Scope
+
+This repository is a fork of [kabartsjc/cyseOpenEMR](https://github.com/kabartsjc/cyseOpenEMR), which provides a baseline OpenEMR deployment used as the monitored system under test. EverWatch is built as an independent monitoring layer on top of that foundation and does not modify any upstream OpenEMR application code.
+
+#### Inherited from upstream (`kabartsjc/cyseOpenEMR`)
+
+| File | Role |
+|------|------|
+| `docker-compose.yml` | Base OpenEMR + MariaDB service definitions (extended by EverWatch) |
+| `LICENSE` | Project license |
+
+#### Added or substantially rewritten by EverWatch
+
+| File / Directory | EverWatch Contribution |
+|------------------|------------------------|
+| `docker-compose.yml` | Extended with Elasticsearch, Kibana, Logstash, and Filebeat service definitions |
+| `filebeat.yml` | Filebeat input/output configuration for Apache log shipping |
+| `logstash/pipeline/logstash.conf` | Full Logstash pipeline: ATNA syslog ingestion, grok parsing, GeoIP enrichment, and Elasticsearch output |
+| `logstash_certs/` | TLS certificate authority and client/server certificates for ATNA mutual-TLS |
+| `EverWatchDashboard.ndjson` | Kibana saved-objects export (dashboard panels, index patterns, visualizations) |
+| `rules_export.ndjson` | Kibana Security detection rules (failed logins, out-of-state logins, record misuse) |
+| `import-dashboard.sh` | Automated script to wait for Kibana readiness and import dashboards and rules |
+| `init-passwords.sh` | Helper script to initialise Elasticsearch built-in user passwords |
+| `autostart/` | systemd service unit and installer for unattended stack startup |
+| `scripts/` | Supporting operational scripts |
+| `geoip-db/` | MaxMind GeoLite2 City database for login geolocation enrichment |
+| `logo/` | EverWatch branding assets |
+| `.env.example` | Credential template (`.env` excluded from version control) |
+
+---
+
 ## 2. EverWatch Start-up Guide
 
 This section provides instructions for EverWatch installation and setup to get Kibana working and logs ingesting into Elasticsearch. EverWatch requires the same dependencies as the OpenEMR environment. Follow the [parent repo](https://github.com/kabartsjc/cyseOpenEMR) for Docker and environment setup.
+
+---
+
+### 2.0 Environment Configuration
+
+> **Required before first run** — credentials are not stored in the repository.
+
+1. Copy the template to create your local environment file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Open `.env` and replace every `change_me_*` placeholder with a strong, unique value:
+   - `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` — MariaDB credentials
+   - `OPENEMR_ADMIN_PASS` — OpenEMR web-UI admin password
+   - `ELASTIC_PASSWORD` — Elasticsearch superuser password (8+ chars)
+   - `KIBANA_SYSTEM_PASSWORD` — Kibana service-account password
+   - `KIBANA_ENCRYPTEDSAVEDOBJECTS_KEY`, `KIBANA_SECURITY_SESSION_KEY`, `KIBANA_REPORTING_KEY` — must each be **32 or more characters**
+
+> `.env` is excluded by `.gitignore`.
 
 ---
 
@@ -94,8 +148,8 @@ Wait until `elasticsearch`, `kibana`, `logstash`, `filebeat`, `openemr_app`, and
 
 Open OpenEMR at `http://localhost:8080` and log in:
 
-- **Username:** `admin`
-- **Password:** `pass`
+- **Username:** value of `OPENEMR_ADMIN_USER` in your `.env` (default: `admin`)
+- **Password:** value of `OPENEMR_ADMIN_PASS` in your `.env`
 
 > For remote deployment replace `localhost` with your host IP.
 
@@ -148,7 +202,7 @@ The script polls until Kibana is ready, then imports:
 Log in to Kibana at `http://localhost:5601`:
 
 - **Username:** `elastic`
-- **Password:** `CYSE587project!`
+- **Password:** value of `ELASTIC_PASSWORD` in your `.env`
 
 > For remote deployment replace `localhost` with your host IP.
 
